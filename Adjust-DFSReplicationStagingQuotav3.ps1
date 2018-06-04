@@ -70,6 +70,8 @@ $increment = 4096 # The minimum amount (in MB) that a staging quota should be re
 
 $DfsrMembers = Get-DfsrMember -DomainName $DomainName #-GroupName "sites.damen.local\appdata\damen" # To get the servers of the replication group
 
+$DfsRepfolders = $DfsrMembers | Get-DfsReplicatedFolder -DomainName $DomainName
+
 $AllDfsServers = ($DfsrMembers).ComputerName | select -Unique   # Each server in all replication groups
 
 foreach ($SiteDfsServer in $AllDfsServers)
