@@ -51,9 +51,7 @@ Write-Log -Message "Running..."
 
 # Clean variables
 
-$FileNameTooLong = ""
 $DfsrMembers = ""
-$DfsRepfolders = ""
 $DfsRepfolder = ""
 $DCRepPartnerQuotas = ""
 $DCRepPartnerQuota = ""
@@ -63,15 +61,14 @@ $CompleteJobs = ""
 
 # Initiallize the array that will contain the data to write to the CSV file, and setting other variables
 
-$JobArray = @()
 $DFSArray = @()
-$DomainName = "sites.damen.local"
+$DomainName = "schelde.com"
 $increment = 4096 # The minimum amount (in MB) that a staging quota should be regardless of size of files
 
 
 # Get all the servers
 
-$DfsrMembers = Get-DfsrMember -DomainName $DomainName -GroupName "sites.damen.local\appdata\damen" # To get the servers of the replication group
+$DfsrMembers = Get-DfsrMember -DomainName $DomainName #-GroupName "sites.damen.local\appdata\damen" # To get the servers of the replication group
 
 $AllDfsServers = ($DfsrMembers).ComputerName | select -Unique   # Each server in all replication groups
 
