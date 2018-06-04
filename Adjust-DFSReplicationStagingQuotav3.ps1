@@ -12,7 +12,7 @@
 
 #>
 
-# Function to make it easy to write to a log file test
+# Function to make it easy to write to a log file
 
 Function Write-Log {
     [CmdletBinding()]
