@@ -52,7 +52,7 @@ Write-Log -Message "Running..."
 # Clean variables
 
 $DfsrMembers = ""
-$DfsRepfolder = ""
+$DfsRepfolders = ""
 $DCRepPartnerQuotas = ""
 $DCRepPartnerQuota = ""
 $SiteRepPartnerQuotas = ""
@@ -170,8 +170,8 @@ foreach ($CompleteJob in $CompleteJobs)
         Write-Log "Stagingfolder $($CompleteJob.Name) properties:" -Level DEBUG
         Write-Log "Actual size of the 32 largest files is $($Dfs32LargestFilesRounded) MB" -Level DEBUG
                 
-        $DCRepPartnerQuotas = $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolder.foldername)" -and "$($_.computername)" -match "FIS001"}
-        $SiteRepPartnerQuotas = $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolder.foldername)" -and "$($_.computername)" -notmatch "FIS001"}
+        $DCRepPartnerQuotas = $DfsRepFolders | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolders.foldername)" -and "$($_.computername)" -match "FIS001"}
+        $SiteRepPartnerQuotas = $DfsRepFolders | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolders.foldername)" -and "$($_.computername)" -notmatch "FIS001"}
         
         foreach ($DCRepPartnerQuota in $DCRepPartnerQuotas) 
             {
@@ -193,8 +193,8 @@ foreach ($CompleteJob in $CompleteJobs)
         Write-Log -Message "Done calculating, adding to Array"
         
         $DFSArray += @{ `
-            'Group Name'=$DfsRepFolder.GroupName; `
-            'DFS Path'=$DfsRepFolder.DfsnPath; `
+            'Group Name'=$DfsRepFolders.GroupName; `
+            'DFS Path'=$DfsRepFolders.DfsnPath; `
             'Current Staging Path Quota (MB)'=$DCRepPartnerQuota.StagingPathQuotaInMB; `
             'Actual Size (MB)'= $Dfs32LargestFilesRounded; `
             'New Quota Size (MB)'=$DfsMinimumStagingQuota
@@ -202,7 +202,7 @@ foreach ($CompleteJob in $CompleteJobs)
 
         # Here is the real work being done, adjusting the actual StagingPathQuotaInMB to the value we calculated it should be. Remove -WhatIf at the end to make it actually do things
 
-        $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolder.foldername)"} | Set-DfsrMembership -StagingPathQuotaInMB $DfsMinimumStagingQuota -force -WhatIf
+        $DfsRepFolders | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($dfsrepFolders.foldername)"} | Set-DfsrMembership -StagingPathQuotaInMB $DfsMinimumStagingQuota -force -WhatIf
     } 
 
 # Exporting the data we collected to CSV. You'll find the CSV in your homefolder ex.: D:\users\amver04\
