@@ -12,7 +12,7 @@
 
 #>
 
-# Function to make it easy to write to a log file
+# Function to make it easy to write to a log file test
 
 Function Write-Log {
     [CmdletBinding()]
@@ -100,7 +100,8 @@ foreach ($SiteDfsServer in $AllDfsServers)
                 $SiteDfsServerJobsRunning = Get-Job | ?{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer}
                 }
 
-            Invoke-Command -ComputerName $SiteDfsServer -ArgumentList $SiteDfsFolder -AsJob -JobName "$($SiteDfsFolder.DfsnPath)" `                { param($SiteDfsFolder)                     
+            Invoke-Command -ComputerName $SiteDfsServer -ArgumentList $SiteDfsFolder -AsJob -JobName "$($SiteDfsFolder.DfsnPath)" `
+                { param($SiteDfsFolder)                     
                 (Get-ChildItem $SiteDfsFolder.DfsnPath -Recurse -ErrorAction SilentlyContinue | `
                 Sort-Object Length -Descending | `
                 Select-Object -First 32 | `
@@ -193,7 +194,10 @@ foreach ($CompleteJob in $CompleteJobs)
         Write-Log -Message "Done calculating, adding to Array"
         
         $DFSArray += @{ `
-            'Group Name'=$DfsRepFolder.GroupName; `            'DFS Path'=$DfsRepFolder.DfsnPath; `            'Current Staging Path Quota (MB)'=$DCRepPartnerQuota.StagingPathQuotaInMB; `            'Actual Size (MB)'= $Dfs32LargestFilesRounded; `
+            'Group Name'=$DfsRepFolder.GroupName; `
+            'DFS Path'=$DfsRepFolder.DfsnPath; `
+            'Current Staging Path Quota (MB)'=$DCRepPartnerQuota.StagingPathQuotaInMB; `
+            'Actual Size (MB)'= $Dfs32LargestFilesRounded; `
             'New Quota Size (MB)'=$DfsMinimumStagingQuota
                 }
 
