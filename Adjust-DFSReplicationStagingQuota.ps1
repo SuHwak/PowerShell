@@ -50,10 +50,8 @@ Write-Log -Message "Running..."
 
 # Clean/define variables
 
-$FileNameTooLong = ""
 $DfsrMembers = ""
 $AllDfsServers = ""
-$DfsRepfolders = ""
 $SiteDfsServer = ""
 $SiteDfsFolders = ""
 $SiteDfsFolder = ""
@@ -76,7 +74,7 @@ $JobError = ""
 # Initiallize the array that will contain the data to write to the CSV file, and setting other variables
 
 $DFSArray = @()
-$DomainName = "sites.damen.local"
+$DomainName = "schelde.com"
 $increment = 4096 # The minimum amount (in MB) that a staging quota should be regardless of size of files
 $RunningTime = 0
 
@@ -139,7 +137,7 @@ Write-Log -Message "Started all the jobs, now we need to wait untill they have a
 
 $RunningJobs = Get-Job | ?{$_.State -eq "Running"} # Where is my whip?
 
-While ($RunningJobs.Count -ne 0 -and $RunningTime -lt 60) # Wait untill all the jobs are finished, but not longer then 60 minutes
+While ($RunningJobs.Count -ne 0 -and $RunningTime -lt 60) # Wait until all the jobs are finished, but not longer then 60 minutes
     {
     Write-Log -Message "We have uncompleted jobs, and we are waiting for these:"
     Get-Job | ?{$_.State -eq "Running"} | Format-Table -AutoSize | Out-File  -append "$env:HOMEDRIVE$env:HOMEPATH\DFSLogfileV2 $(get-date -Format 'yyyy-MM-dd').log" -Encoding utf8
