@@ -90,26 +90,26 @@ foreach ($SiteDfsServer in $AllDfsServers)
     if ($SiteDfsServer -notmatch "FIS001") # Skip any servers in the DC
         {
         
-        $SiteDfsFolders = $DfsrMembers | ?{$_.ComputerName -match $SiteDfsServer} | Get-DfsReplicatedFolder -DomainName $DomainName # This gets us the PS Object that contains the DFSN Path
+        $SiteDfsFolders = $DfsrMembers | Where-Object{$_.ComputerName -match $SiteDfsServer} | Get-DfsReplicatedFolder -DomainName $DomainName # This gets us the PS Object that contains the DFSN Path
             
         foreach ($SiteDfsFolder in $SiteDfsFolders)
             {
             Write-Log -Message "------------------------------------------------"
-            Write-Log -Message "Processing: $($SiteDfsFolder.DfsnPath)"
+            Write-Log -Message "Processing: $($SiteDfsFolder.GroupName)"
 
             # Making sure we don't start more then running 20 jobs on a particular server, because of the session limit of 25
             
-            $SiteDfsServerJobsRunning = Get-Job | ?{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # How many jobs are we already running on this server?
+            $SiteDfsServerJobsRunning = Get-Job | Where-Object{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # How many jobs are we already running on this server?
                         
             While ($SiteDfsServerJobsRunning.Count -eq 20) # Going to throttle the amount of running jobs on the site server
                 {
                 Start-Sleep 15 # Wait 15 seconds because we have 20 running jobs
-                $SiteDfsServerJobsRunning = Get-Job | ?{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # Checking again
+                $SiteDfsServerJobsRunning = Get-Job | Where-Object{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # Checking again
                 }
 
             # So we have less then 20 jobs running, so we can add another
 
-            Invoke-Command -ComputerName $SiteDfsServer -ArgumentList $SiteDfsFolder -AsJob -JobName "$($SiteDfsFolder.DfsnPath)" `
+            Invoke-Command -ComputerName $SiteDfsServer -ArgumentList $SiteDfsFolder -AsJob -JobName "$($SiteDfsFolder.Identifier)" `
                 { param($SiteDfsFolder)                     
                 (Get-ChildItem $SiteDfsFolder.DfsnPath -Recurse -ErrorAction SilentlyContinue | `
                 Sort-Object Length -Descending | `
@@ -117,8 +117,8 @@ foreach ($SiteDfsServer in $AllDfsServers)
                 Measure-Object -Property Length -Sum).Sum /1mb
                 }
 
-            $SiteDfsServerJobsRunning = Get-Job | ?{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # Checking the amount of running jobs again
-            $SiteDfsServerJobsAll = Get-Job | ?{$_.Location -eq $SiteDfsServer} # We also need to check the total (running or otherwise) because we don't need to start jobs when there is no more work to be done.
+            $SiteDfsServerJobsRunning = Get-Job | Where-Object{$_.State -eq "Running" -and $_.Location -eq $SiteDfsServer} # Checking the amount of running jobs again
+            $SiteDfsServerJobsAll = Get-Job | Where-Object{$_.Location -eq $SiteDfsServer} # We also need to check the total (running or otherwise) because we don't need to start jobs when there is no more work to be done.
 
             Write-Log -Message "We have $($SiteDfsServerJobsRunning.Count) running job(s) on $SiteDfsServer." -Level DEBUG
             Write-Log -Message "We have added $($SiteDfsServerJobsAll.Count) total job(s) on $SiteDfsServer." -Level DEBUG
@@ -135,29 +135,29 @@ foreach ($SiteDfsServer in $AllDfsServers)
 
 Write-Log -Message "Started all the jobs, now we need to wait untill they have all finished, but a maximum of 1 hour"
 
-$RunningJobs = Get-Job | ?{$_.State -eq "Running"} # Where is my whip?
+$RunningJobs = Get-Job | Where-Object{$_.State -eq "Running"} # Where is my whip?
 
 While ($RunningJobs.Count -ne 0 -and $RunningTime -lt 60) # Wait until all the jobs are finished, but not longer then 60 minutes
     {
     Write-Log -Message "We have uncompleted jobs, and we are waiting for these:"
-    Get-Job | ?{$_.State -eq "Running"} | Format-Table -AutoSize | Out-File  -append "$env:HOMEDRIVE$env:HOMEPATH\DFSLogfileV2 $(get-date -Format 'yyyy-MM-dd').log" -Encoding utf8
+    Get-Job | Where-Object{$_.State -eq "Running"} | Format-Table -AutoSize | Out-File  -append "$env:HOMEDRIVE$env:HOMEPATH\DFSLogfileV2 $(get-date -Format 'yyyy-MM-dd').log" -Encoding utf8
     
     Start-Sleep 60 # wait 1 minute for the next update
     $RunningTime++ # Keeping time
     
-    $RunningJobs = Get-Job | ?{$_.State -eq "Running"}
+    $RunningJobs = Get-Job | Where-Object{$_.State -eq "Running"}
             
     }
 
 Write-Log -Message "All jobs are Finished or we ran out of time"
 
-$CompleteJobs = Get-Job | ?{$_.State -eq "Completed"} 
+$CompleteJobs = Get-Job | Where-Object{$_.State -eq "Completed"} 
 
 foreach ($CompleteJob in $CompleteJobs) # Looping through every completed job, write to log file, and execute the change.
     {
 
     $JobData = Receive-Job $CompleteJob -Keep # So, how many bytes did you say?
-    $DfsRepFolder = Get-DfsReplicatedFolder -DomainName $DomainName | ?{$_.DfsnPath -eq $CompleteJob.Name} # We used the DFSNPatch for the name of the job, so we can match it again
+    $DfsRepFolder = Get-DfsReplicatedFolder -DomainName $DomainName | Where-Object{$_.DfsnPath -eq $CompleteJob.Name} # We used the DFSNPatch for the name of the job, so we can match it again
 
     # Round to whole MB
     $Dfs32LargestFilesRounded = [math]::Round($JobData+1,0,1) # Rounding up like I learned at school, 0.445 -> 1
@@ -166,7 +166,7 @@ foreach ($CompleteJob in $CompleteJobs) # Looping through every completed job, w
     Write-Log "The 32 largest files together are $Dfs32LargestFilesRounded MB" -Level DEBUG
     $DfsMinimumStagingQuota = [Math]::Ceiling($Dfs32LargestFilesRounded / $Increment) * $Increment; # Anything below 4096 becomes 4096, anything below 8192 becomes 8192, etc with 4092 increments.
 
-    $SiteRepPartnerQuotas = $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | ?{$_.foldername -eq "$($DfsRepfolder.foldername)" -and "$($_.computername)" -notmatch "FIS001"}
+    $SiteRepPartnerQuotas = $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | Where-Object{$_.foldername -eq "$($DfsRepfolder.foldername)" -and "$($_.computername)" -notmatch "FIS001"}
         
     foreach ($SiteRepPartnerQuota in $SiteRepPartnerQuotas) 
         {
@@ -192,21 +192,21 @@ foreach ($CompleteJob in $CompleteJobs) # Looping through every completed job, w
     # 
 
     Write-Log -Message "Setting the Quota on $($DfsRepFolder.DfsnPath)"
-    $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | ?{$_.ComputerName -eq $CompleteJob.Location -and $_.FolderName -match "$($CompleteJob.name | Split-Path -Leaf)"} | Set-DfsrMembership -StagingPathQuotaInMB $DfsMinimumStagingQuota -force -WhatIf
+    $DfsRepFolder | Get-DfsrMembership -DomainName $DomainName | Where-Object{$_.ComputerName -eq $CompleteJob.Location -and $_.FolderName -match "$($CompleteJob.name | Split-Path -Leaf)"} | Set-DfsrMembership -StagingPathQuotaInMB $DfsMinimumStagingQuota -force -WhatIf
     } 
 
 # Exporting the data we collected to CSV. You'll find the CSV in your homefolder ex.: D:\users\amver04\
 
 Write-Log -Message "Finished, writing out the CSV file..."
 
-$DFSArray | foreach {New-Object psobject -Property $_} | Export-Csv -NoTypeInformation "$env:HOMEDRIVE$env:HOMEPATH\DFSArray $(get-date -Format 'yyyy-MM-dd HHMM').csv" -Delimiter ";"
+$DFSArray | ForEach-Object {New-Object psobject -Property $_} | Export-Csv -NoTypeInformation "$env:HOMEDRIVE$env:HOMEPATH\DFSArray $(get-date -Format 'yyyy-MM-dd HHMM').csv" -Delimiter ";"
 
 # Removing the succesfull jobs from the system
 $CompleteJobs | Remove-Job
 
 # Writing out the jobs with errors
 
-$JobErrors = Get-Job | ?{$_.State -ne "completed"}
+$JobErrors = Get-Job | Where-Object{$_.State -ne "completed"}
 
 foreach ($JobError in $JobErrors)
     {
